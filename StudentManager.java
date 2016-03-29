@@ -1,5 +1,6 @@
 package ThesisMan;
 
+import ThesisManCommon.ServiceFailureException;
 import java.util.List;
 
 /**

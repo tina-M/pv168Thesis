@@ -1,5 +1,6 @@
 package ThesisMan;
 
+import ThesisManCommon.ServiceFailureException;
 import java.util.List;
 
 /**
@@ -63,5 +64,5 @@ public interface ThesisManager {
      * @return list of all thesss in database.
      * @throws ServiceFailureException when db operation fails.
      */
-    List<Thesis> findAllTheses() throws ServiceFailureException;
+    List<Thesis> getAllTheses() throws ServiceFailureException;
 }

@@ -1,6 +1,9 @@
-package thesisman;
+package ThesisMan;
 
-import java.sql.Connection;
+import ThesisManCommon.DBUtils;
+import ThesisManCommon.ValidationException;
+import ThesisManCommon.ServiceFailureException;
+import ThesisManCommon.IllegalEntityException;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -15,9 +18,6 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
-import ThesisMan.ServiceFailureException;
-import ThesisMan.Student;
-import ThesisMan.StudentManagerImpl;
 
 /**
  *
@@ -30,35 +30,24 @@ public class StudentManagerImplTest {
     
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
-    
-    /*
-    @Before
-    public void setUp() throws SQLException {
-        manager = new StudentManagerImpl();
-    }
-    */
+     
     @Before
     public void setUp() throws SQLException {
         dataSource = prepareDataSource();
-        try (Connection connection = dataSource.getConnection()) {
-            connection.prepareStatement("CREATE TABLE STUDENT ("
-            + "id bignit primary key generated always as identity,"
-            + "name varchar(30), surname varchar(30)").executeUpdate();
-       }
-        manager = new StudentManagerImpl(dataSource);
+        DBUtils.executeSqlScript(dataSource, ThesisManager.class.getResource("createTables.sql"));
+        manager = new StudentManagerImpl();
+        manager.setDataSource(dataSource);
     }
     
     @After
     public void tearDown() throws SQLException {
-        try (Connection connection = dataSource.getConnection()) {
-            connection.prepareStatement("DROP TABLE STUDENT").executeUpdate();
-        }
+        DBUtils.executeSqlScript(dataSource, ThesisManager.class.getResource("dropTables.sql"));
     }
     
     private static DataSource prepareDataSource() throws SQLException {
         EmbeddedDataSource ds = new EmbeddedDataSource();
         
-        ds.setDatabaseName("memory:studentmgr-test");
+        ds.setDatabaseName("memory:thesismgr-test");
         ds.setCreateDatabase("create");
         return ds;
     }
@@ -83,53 +72,53 @@ public class StudentManagerImplTest {
     }
    
     @Test
-    public void createStudentWithWrongId() throws ServiceFailureException {
+    public void createStudentWithExistingId() throws ServiceFailureException {
         Student student = newStudent("Joshua", "Bloch");
         student.setId(1L);
         
-        expectedException.expect(IllegalArgumentException.class);        
+        expectedException.expect(IllegalEntityException.class);        
         manager.createStudent(student);
     }
     
     @Test
     public void createStudentWithNullName() throws ServiceFailureException {
         Student student = newStudent(null, "Bloch");
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(ValidationException.class);
         manager.createStudent(student);
     }
     
     @Test
     public void createStudentWithEmptyName() throws ServiceFailureException {
         Student student = newStudent("", "Bloch");
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(ValidationException.class);
         manager.createStudent(student);
     }
     
     @Test
     public void createStudentWithNumericName() throws ServiceFailureException {
         Student student = newStudent("Jos69", "Bloch");
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(ValidationException.class);
         manager.createStudent(student);
     }     
     
     @Test
     public void createStudentWithNullSurname() throws ServiceFailureException {
         Student student = newStudent("Joshua", null);
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(ValidationException.class);
         manager.createStudent(student);
     }   
     
     @Test
     public void createStudentWithEmptySurname() throws ServiceFailureException {
         Student student = newStudent("Joshua", "");
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(ValidationException.class);
         manager.createStudent(student);
     }    
         
     @Test
     public void createStudentWithNumericSurname() throws ServiceFailureException {
         Student student = newStudent("Joshua", "B6l9o");
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(ValidationException.class);
         manager.createStudent(student);
     }
     
@@ -208,6 +197,14 @@ public class StudentManagerImplTest {
     }
     
     @Test
+    public void updateStudentWithNullId() throws ServiceFailureException {
+        Student student = newStudent("Joshua", "Bloch");
+        student.setId(null);
+        expectedException.expect(IllegalEntityException.class);
+        manager.updateStudent(student);
+    }
+    
+    @Test
     public void updateStudentWithNullName() throws ServiceFailureException {
         Student student = newStudent("Joshua", "Bloch");
         manager.createStudent(student);
@@ -215,7 +212,7 @@ public class StudentManagerImplTest {
         
         student = manager.getStudentById(studentId);
         student.setName(null);
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(ValidationException.class);
         manager.updateStudent(student);
     }
     
@@ -227,7 +224,7 @@ public class StudentManagerImplTest {
         
         student = manager.getStudentById(studentId);
         student.setName("");
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(ValidationException.class);
         manager.updateStudent(student);
     }
     
@@ -239,7 +236,7 @@ public class StudentManagerImplTest {
         
         student = manager.getStudentById(studentId);
         student.setName("J6sh9ua");
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(ValidationException.class);
         manager.updateStudent(student);
     }
     
@@ -251,7 +248,7 @@ public class StudentManagerImplTest {
         
         student = manager.getStudentById(studentId);
         student.setSurname("");
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(ValidationException.class);
         manager.updateStudent(student);
     }
     
@@ -263,7 +260,7 @@ public class StudentManagerImplTest {
         
         student = manager.getStudentById(studentId);
         student.setSurname(null);
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(ValidationException.class);
         manager.updateStudent(student);
     }
     
@@ -275,7 +272,7 @@ public class StudentManagerImplTest {
         
         student = manager.getStudentById(studentId);
         student.setSurname("B6lo9ch");
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(ValidationException.class);
         manager.updateStudent(student);
     }
     
@@ -306,16 +303,16 @@ public class StudentManagerImplTest {
         Student student = newStudent("Joshua", "Bloch");
         
         student.setId(null);
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(IllegalEntityException.class);
         manager.deleteStudent(student);
     }
     
     @Test
-    public void deleteStudentWithWrongId() throws ServiceFailureException {
+    public void deleteStudentWithNonExistingId() throws ServiceFailureException {
         Student student = newStudent("Joshua", "Bloch");
         
         student.setId(1L);
-        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expect(IllegalEntityException.class);
         manager.deleteStudent(student);
     }
     
@@ -351,3 +348,4 @@ public class StudentManagerImplTest {
         }
     }
 }
+
